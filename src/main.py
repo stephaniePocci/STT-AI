@@ -4,7 +4,7 @@ from pathlib import Path
 from silero_vad import load_silero_vad
 
 from convert_audio import convert_audio
-from vad import calculate_probabilities, classify_frames, read_wav
+from vad import calculate_probabilities, classify_frames, merge_speech_regions, read_wav, frames_to_speech_regions
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -23,9 +23,11 @@ def main():
     for input_path in input_files:
         print(f"Processing {input_path.name}...")
         wav_path = convert_audio(input_path, OUTPUT_DIR)
-        audio = read_wav(wav_path)
-        frames = calculate_probabilities(audio, model)
-        frames = classify_frames(frames) 
+        audio = read_wav(wav_path) # Read the WAV file into a normalized torch tensor
+        frames = calculate_probabilities(audio, model) # Calculate the probability of speech for each frame in the audio
+        frames = classify_frames(frames) # Classify each frame as speech or non-speech based on the probability threshold
+        frames = frames_to_speech_regions(frames, len(audio)) # Convert classified frames into speech regions with start and end samples
+        frames = merge_speech_regions(frames)  # Merge speech regions based on the defined gap
 
         probabilities_path = wav_path.with_name(
             f"{wav_path.stem}_probabilities.json"
